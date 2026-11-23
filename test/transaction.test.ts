@@ -3,6 +3,7 @@ import {Buffer} from 'buffer';
 import {expect} from 'chai';
 import * as fs from 'fs';
 import * as path from 'path';
+import {stub} from 'sinon';
 
 import {Connection} from '../src/connection';
 import {Keypair} from '../src/keypair';
@@ -14,7 +15,7 @@ import {
   VersionedTransaction,
 } from '../src/transaction';
 import {StakeProgram, SystemProgram} from '../src/programs';
-import {Message, MessageV1} from '../src/message';
+import {Message, MessageV1, VersionedMessage} from '../src/message';
 import invariant from '../src/utils/assert';
 import {toBuffer} from '../src/utils/to-buffer';
 import {helpers} from './mocks/rpc-http';
@@ -1152,6 +1153,19 @@ describe('VersionedTransaction', () => {
 
     const versionedTx = VersionedTransaction.deserialize(serializedVersionedTx);
     expect(versionedTx.message.version).to.eq(0);
+  });
+
+  it('rejects a decoded v1 message on the signatures-first path', () => {
+    const deserializeMessage = stub(VersionedMessage, 'deserialize').returns(
+      Object.create(MessageV1.prototype),
+    );
+    try {
+      expect(() => VersionedTransaction.deserialize(Uint8Array.of(0))).to.throw(
+        'Invalid message version for a signatures-first transaction',
+      );
+    } finally {
+      deserializeMessage.restore();
+    }
   });
 
   it('deserializes version 1 transactions', () => {
